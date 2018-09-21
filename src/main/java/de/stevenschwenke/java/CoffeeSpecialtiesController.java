@@ -13,7 +13,7 @@ public class CoffeeSpecialtiesController {
 
     @GetMapping
     public List<String> getCoffeeSpecialties() {
-        return new ArrayList<>(){{
+        return new ArrayList<String>(){{
             add("Espresso");
             add("Cappuccino");}};
     }
