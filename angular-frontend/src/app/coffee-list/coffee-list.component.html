@@ -1,3 +1,29 @@
-<p>
-  {{coffeeSpecialties}}
-</p>
+<div align="center">
+  <div>
+    Here, you should see a list of coffee specialties, loaded from the server.
+  </div>
+
+  <div *ngIf="coffeeSpecialties" style="margin-top: 20px">
+    Because you are logged in, you see this list:
+    <div style="margin-top: 10px">
+      {{coffeeSpecialties}}
+    </div>
+    <div style="margin-top: 30px">
+      That is the JSON Web Token that gets send with every request the Angular client sends to the server:
+    </div>
+    <div style="margin-top: 10px">
+      {{token}}
+    </div>
+    <div style="margin-top: 30px">
+      Logout and try to view that list again. In your Developer Tools, you\'ll see an 403 error.
+    </div>
+    <button (click)="onLogout()" style="margin-top: 10px">Logout</button>
+  </div>
+
+  <div *ngIf="!coffeeSpecialties" style="margin-top: 20px">
+    <div>
+      You don't see anything because you're logged out. In your browser developer tools, you should see a 403 error as Angular tried to load the coffee specialties list.
+    </div>
+    <button routerLink="login" style="margin-top: 20px">Login here.</button>
+  </div>
+</div>

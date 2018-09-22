@@ -1,5 +1,10 @@
 :toc:
 
+
+= How to run example application
+* Server: run Application.java
+* Client: navigate to /angular-frontend and run _ng serve_
+
 = Spring Security Workshop
 
 These are my notes to the course https://www.udemy.com/spring-security-course/learn/v4/overview[The complete Spring Security Developer Course]. Some code examples are from the great project https://www.jhipster.tech[JHipster].
