@@ -1,12 +1,15 @@
 <h2 align="center">Login</h2>
+<div align="center">
+  Use the user "joe" with password "joe" to log in.
+</div>
 <form (ngSubmit)="onLogin(f)" #f="ngForm">
-  <div align="center" class="loginMask" style="padding:50px">
+  <div align="center" class="loginMask" style="padding:20px">
     <div align="center">
       <label for="username">Username</label>
-      <input class="ui-float-label" type="text" id="username" size="30" pInputText name="username"
+      <input class="ui-float-label" type="text" id="username" size="30" name="username"
              title="Benutzername" autocomplete="username" ngModel><br>
       <label for="password">Password</label>
-      <input class="ui-float-label" type="password" id="password" size="30" pInputText name="password"
+      <input class="ui-float-label" type="password" id="password" size="30" name="password"
              title="Passwort"
              autocomplete="current-password" ngModel><br>
       <button>
