@@ -1,15 +1,50 @@
+= JWT with Angular and Spring Security
 :toc:
+:imagesdir: images
 
+The runnable demo in this repository shows an implementation for authentication and authorization for an Angular (5) application with Spring Boot (2), including Spring Security, via JSON Web Token (JWT). This readme contains additional background information and can be used as a guide through the codebase.
 
-= How to run example application
-* Server: run Application.java
-* Client: navigate to /angular-frontend and run _ng serve_
+Sources on which this workshop is built:
 
-= Spring Security Workshop
+* https://www.udemy.com/spring-security-course/learn/v4/overview[The complete Spring Security Developer Course] on Udemy
+* https://www.jhipster.tech[JHipster], a code generator for Angular applications with a Spring backend
 
-These are my notes to the course https://www.udemy.com/spring-security-course/learn/v4/overview[The complete Spring Security Developer Course]. Some code examples are from the great project https://www.jhipster.tech[JHipster].
+== Step-by-step guide
+This step-by-step guide gives an overview on how JWT work together with Angular and Spring. Details about this follow in the subsequent sections of this readme.
 
-== Introduction
+=== Step 0: How to run the demo
+This repository consists of two applications:
+
+1. Spring Boot server: run Application.java
+1. Angular client: in the terminal, navigate to /angular-frontend and run _ng serve_
+
+=== Step 1: Missing authentication leads to HTTP 403
+* after starting the application, visit localhost:4200
+* as described in the application, data from the server could not be loaded because of a HTTP 403 error "Forbidden: Access Denied"
+
+image::step_1_access_denied.png[]
+
+=== Step 2: Login
+* navigate to http://localhost:4200/#/login either directly via URL or by clicking the login-button
+* enter username = "joe" and password = "joe"
+* authentication is send to server:
+
+image::step_2_login_sending_login.png[]
+
+* the response contains the JWT created by the server:
+
+image::step_2_login_receiving_token.png[]
+
+* after being forwarded to the initial mask where the data from the server is supposed to be rendered, the request is now granted:
+
+image::step_2_login_request_granted.png[]
+
+* note the "Authorization Bearer" in the request header - it contains the JWT
+
+=== Step 3: Logout
+* on logout, the locally stored JWT is deleted from the Angular client application, hence it cannot be send to the server, which is why the data cannot be send by the server
+
+== Introduction to authentication and authorization with Spring Security
 * https://spring.io/projects/spring-security
 * handles security as cross-cutting concern: application logic will not be changed by using Spring Security
 * doesn't rely on any environment, for example special application server
@@ -24,16 +59,16 @@ These are my notes to the course https://www.udemy.com/spring-security-course/le
 ** Cross Site Scripting (XSS) protection
 ** Password encoding via hash and salt
 
-== Filtering requests
+=== Filtering requests
 * = base for authorization: don't let every request resolve
 * done with multiple mechanisms like
 ** URL-based filtering
 ** filter-chain
 
-=== URL-based filtering
+==== URL-based filtering
 * decision which request URL gets generally filtered in _WebSecurityConfigurerAdapter_
 * via Ant-patterns
-* in JHipster done in _SecurityConfiguration_:
+* _SecurityConfiguration_:
 
 [source, java]
 ----
@@ -44,38 +79,28 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(WebSecurity web) throws Exception {
         web.ignoring()
-            .antMatchers("/api/authenticate");
-            .antMatchers(HttpMethod.OPTIONS, "/**")
-            .antMatchers("/app/**/*.{js,html}")
-            .antMatchers("/i18n/**")
-            .antMatchers("/content/**")
-            .antMatchers("/h2-console/**")
-            .antMatchers("/swagger-ui/index.html")
-            .antMatchers("/test/**");
+                .antMatchers("/api/authenticate")
+                .antMatchers(HttpMethod.OPTIONS, "/**") // Bad style, but for demo OK
+                .antMatchers("/h2-console/**");
     }
 
-@Override
-public void configure(HttpSecurity http) throws Exception {
-    http
-        .authorizeRequests()
-        .antMatchers("/api/register").permitAll()
-        .antMatchers("/api/activate").permitAll()
-        .antMatchers("/api/authenticate").permitAll()
-        .antMatchers("/api/account/reset-password/init").permitAll()
-        .antMatchers("/api/account/reset-password/finish").permitAll()
-        .antMatchers("/api/**").authenticated()
-        .antMatchers("/management/health").permitAll()
-        .antMatchers("/management/info").permitAll()
-        .antMatchers("/management/**").hasAuthority(AuthoritiesConstants.ADMIN)
-    .and()
-        .apply(securityConfigurerAdapter());
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        http
+                .cors().disable() // for demo OK
+                .csrf().disable() // for demo OK
+                .authorizeRequests()
+                .antMatchers("/api/**").authenticated()
+                .and()
+                .apply(securityConfigurerAdapter());
+    }
 
 }
 ----
 
 * *attention*: First matcher matching a URL will decide the filtering! Hence, order of matchers important.
 
-=== Filter-Chain
+==== Filter-Chain
 * if request makes it through the URL-filtering, filter-chain is applied
 * = Servlet-Filters that are organized in the _SecurityFilterChain_:
 
@@ -94,7 +119,7 @@ public interface SecurityFilterChain {
 ----
 
 * provided by Spring via _GenericFilterBean_, which implements _Filter_
-* implementations of this bean for example _DelegatingFilterProxy_ (which uses a filter mapping) or, in JHipster, _JWTFilter_ (which uses a JWT to decide if the request is filtered). Both implementations override _doFilter()_:
+* implementations of this bean for example _DelegatingFilterProxy_ (which uses a filter mapping) or _JWTFilter_ (which uses a JWT to decide if the request is filtered). Both implementations override _doFilter()_:
 
 [source, java]
 ----
@@ -109,16 +134,15 @@ public class JWTFilter extends GenericFilterBean {
 }
 ----
 
-== class Authentication
+=== class Authentication
 * org.springframework.security.core.Authentication = wrapper for user information like credentials and if the user is authenticated
 * used throughout Spring Security
 
-== classes AuthenticationManager, Authentication Provider, UserDetailsService
+=== classes AuthenticationManager, Authentication Provider, UserDetailsService
 * answers question if valid user
 * therefore, needs an _AuthenticationProvider_
 * one way of providing authentication: username + password
 * this done in _UserDetailService_ = strategy for _AuthenticationProvider_
-* in JHipster:
 
 [source, java]
 ----
@@ -145,7 +169,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     ...
 ----
 
-* UserService implementation in JHipster:
+* UserService implementation in this repository:
 
 [source, java]
 ----
@@ -157,7 +181,12 @@ public class DomainUserDetailsService implements UserDetailsService {
 
     ...
 
-    private final UserRepository userRepository;
+    /**
+     * map user -> encrypted password
+     */
+    private Map<String, String> credentials = new HashMap<>(){{
+        put("joe", "$2a$10$FETmvGZlLA8txiuL1Y6dqehHoUO/Q86Kxn5P72lLT6QAE37TnbCeq"); // pw: "joe"
+    }};
 
     ...
 
@@ -165,17 +194,23 @@ public class DomainUserDetailsService implements UserDetailsService {
     @Transactional
     public UserDetails loadUserByUsername(final String login) {
 
-        // Loading user from database
+        if (!credentials.containsKey(login)) {
+            throw new UsernameNotFoundException("User with login " + login + "unknown.");
+        }
 
+        String password = credentials.get(login);
+        return createSpringSecurityUser(login, password);
     }
 
     ...
 
 ----
 
-== Authorities
+* in "real" projects, user data is stored in LDAP or a database, hence in _UserDetailsService_ loading of these information
+
+=== Authorities
 * authorities = roles
-* already used above in _SecurityConfiguration_:
+* for example in _SecurityConfiguration_:
 
 [source, java]
 ----
@@ -189,7 +224,7 @@ public class DomainUserDetailsService implements UserDetailsService {
     }
 ----
 
-* good idea to define authorities in enum to use them in configuration classes:
+* good idea to define authorities in enum to use them in configuration classes (not in this demo)
 
 [source, java]
 ----
@@ -227,9 +262,9 @@ public final class AuthoritiesConstants {
 
 ----
 
-== class SecurityContextHolder
+=== class SecurityContextHolder
 * holds information about currently logged-in user, his authorities and user details
-* examples in JHipster 1. storing user information after authentication:
+* examples in JHipster 1: storing user information after authentication:
 
 [source, java]
 ----
@@ -279,7 +314,7 @@ public final class SecurityUtils {
 * _getCurrentUserLogin()_ used to add user information to actions, for example logged-in user creates new set of data, it could need a creator field or the users email address to respond to this new content
 * Every web-request is processed in its own thread. That is why the static method _SecurityContextHolder.getContext()_ retrieves the context of the currently logged-in user. _SecurityContextPersistenceFilter_ binds the _SecurityContext_ to the current thread of the current web request by using _SecurityContextRepository_. Hence, every request is processed in its own thread, in which the _SecurityContext_ holds only information about the currently logged-in user.
 
-== Class AuthenticationProvider
+=== Class AuthenticationProvider
 * org.springframework.security.authentication.AuthenticationProvider
 * interface
 * *can* be implemented for *additional* custom authentication
@@ -296,13 +331,13 @@ boolean supports(Class<?> authentication);
 * _authenticate()_ = processing authentication, for example by using a database
 * implementation of _AuthenticationProvider_ can simply be registered by declaring it a bean
 
-== Security Interceptor
+=== Security Interceptor
 * stands between user requests and resources
 * two variates:
 ** FilterSecurityInterceptor: filters HTTP requests by checking requests against the _@RequestMapping_ annotations
 ** MethodSecurityInterceptor: filters method invocations by checking requests against _@Secured_ annotations above methods
 
-== CSRF
+=== CSRF
 * Cross Site Request Forgery
 * fundamental problem: browser using open session from "good" site to run requests from "bad" site to the good site
 * example:
@@ -320,7 +355,7 @@ boolean supports(Class<?> authentication);
 * token could change with every user or every couple of minutes, so malicious website cannot know / guess it
 * JHipster: "Spring Security and Angular both have CSRF protection out-of-the-box, but unfortunately they don’t use the same cookies or HTTP headers! In practice, you have in fact no protection at all for CSRF attacks. Of course, we re-configure both tools so that they correctly work together." (https://www.jhipster.tech/security/[source])
 
-== Encoding passwords
+=== Encoding passwords
 * never store user credentials in plain text!
 * setup in JHipster already using best password encoder BCrypt:
 
@@ -398,19 +433,19 @@ public class UserService {
     ...
 ----
 
-=== Salting Hashes
+==== Salting Hashes
 * problem: encrypted passwords could be attacked by creating huge amounts of hashed potential passwords (for example from dictionaries) and comparing these to saved encrypted passwords - attacker would get access to plain text password to try to log in on other websites
 * solution: adding some random data to hash = salt
 * every user has own salt (not one for all!)
 * best solution for password encoder, BCrypt, does already add random salt when creating password
 
-== LDAP Authentication
+=== LDAP Authentication
 * https://directory.apache.org[Apache] provides both a server and a studio application to start an LDAP server and configuring it
 * LDAP holds credentials and authorities, hence no other database for authorization needed
 * connection to Spring Security via https://mvnrepository.com/artifact/org.springframework.security/spring-security-ldap[spring-security-ldap]
 * https://spring.io/guides/gs/authenticating-ldap/[Most recent documentation]
 
-= Authorization
+=== Authorization
 * topics above mostly authentication
 * authorization mentioned:
 
@@ -457,7 +492,7 @@ public void configure(HttpSecurity http) throws Exception {
 ** _hasRole()_
 ** _hasAnyRole()_
 
-== Authorization of methods
+=== Authorization of methods
 * on the backend, methods have to be guarded because of the danger of requests from modified clients
 * enabling global method security:
 
@@ -471,7 +506,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     ...
 ----
 
-=== @PreAuthorize
+==== @PreAuthorize
 * guards methods from access from unauthorized users
 * evaluated *before* method is invoked
 
@@ -485,7 +520,7 @@ public ResponseEntity<User> createUser(@Valid @RequestBody UserDTO userDTO) thro
 
 * _@PreAuthorize_ uses Spring expression language (SPEL)
 
-=== _@PostAuthorize_
+==== _@PostAuthorize_
 * evaluated *after* method is invoked, so return-object can be used for authorization
 * guards methods against being called to get unauthorized data
 
@@ -497,7 +532,7 @@ public String blubber(String username) {
 }
 ----
 
-=== @RolesAllowed
+==== @RolesAllowed
 * shorter version for _@PreAuthorize_ if the goal is to guard for access from wrong roles
 * _@Secured_ and _@RolesAllowed_ identical functionality, however _@Secured_ Spring-specific while _@RolesAllowed_ is not
 
@@ -506,13 +541,13 @@ public String blubber(String username) {
 @RolesAllowed("ROLE_ADMIN, ROLE_USER")
 ----
 
-=== @PreFilter
+==== @PreFilter
 * filter collections that are passed into the method
 
-=== @PostFilter
+==== @PostFilter
 * filters a return collection
 
-== Access Control
+=== Access Control
 * security at domain level
 * example: user A should view entities from user B, but not change them
 * consists of Access Control Entries (ACE) form an Access Control List (ACL)
@@ -526,7 +561,7 @@ public String blubber(String username) {
 * actual filtering done via _@PostAuthorize_
 * other source: https://www.baeldung.com/spring-security-acl
 
-= TLS
+== TLS
 * encrypts data send between client and server
 * create public key for application via terminal - in JHipster, nice stage separation done:
 * _application-dev.yml_:
@@ -576,3 +611,7 @@ server:
 ----
 
 * this is only the basic setup to use HTTPS - how to mandate usage of HTTPS, see https://www.baeldung.com/spring-channel-security-https[here]
+
+= Open Questions
+* How to read authorities in Angular frontend? They are encrypted - how to encrypt?
+* Why encrypt authorities in token? Calls to the backend service should check most recent authorities with database, why send authorities in token?
