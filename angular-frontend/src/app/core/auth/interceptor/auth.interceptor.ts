@@ -5,7 +5,12 @@ import {environment} from '../../../../environments/environment';
 
 
 export class AuthInterceptor implements HttpInterceptor {
-    constructor(private localStorage: LocalStorageService, private sessionStorage: SessionStorageService) {}
+
+    constructor(
+      private localStorage: LocalStorageService,
+      private sessionStorage: SessionStorageService) {
+
+    }
 
     intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
 

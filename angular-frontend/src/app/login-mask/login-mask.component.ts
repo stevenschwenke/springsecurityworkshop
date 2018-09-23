@@ -34,8 +34,9 @@ export class LoginMaskComponent implements OnInit {
 
     const username = form.value.username;
     const password = form.value.password;
+    const rememberMe = form.value.remember;
 
-    this.loginService.login({username: username, password: password})
+    this.loginService.login({username: username, password: password, rememberMe: rememberMe})
       .then(() => {
         this.authenticationError = false;
 
