@@ -13,9 +13,9 @@ public class CoffeeSpecialtiesController {
 
     @GetMapping
     public List<String> getCoffeeSpecialties() {
-        return new ArrayList<String>(){{
+        return new ArrayList<>() {{
             add("Espresso");
-            add("Cappuccino");}};
+            add("Cappuccino");
+        }};
     }
-
 }

@@ -64,33 +64,22 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     public void configure(WebSecurity web) throws Exception {
         web.ignoring()
                 .antMatchers("/api/authenticate")
-                .antMatchers(HttpMethod.OPTIONS, "/**") // TODO Nicht machen, siehe CORS und CSRF
+                .antMatchers(HttpMethod.OPTIONS, "/**") // Bad style, but for demo OK
                 .antMatchers("/h2-console/**");
     }
 
     @Override
     public void configure(HttpSecurity http) throws Exception {
         http
-                .cors().disable()
-                .csrf().disable()
+                .cors().disable() // for demo OK
+                .csrf().disable() // for demo OK
                 .authorizeRequests()
-//                .antMatchers("/api/**").permitAll(); // TODO zum Debuggen
-//            .antMatchers("/api/register").permitAll()
-//            .antMatchers("/api/activate").permitAll()
-//            .antMatchers("/api/authenticate").permitAll();
-//            .antMatchers("/api/account/reset-password/init").permitAll()
-//            .antMatchers("/api/account/reset-password/finish").permitAll()
                 .antMatchers("/api/**").authenticated()
-//            .antMatchers("/management/health").permitAll()
-//            .antMatchers("/management/info").permitAll()
-//            .antMatchers("/management/**").hasAuthority(AuthoritiesConstants.ADMIN)
                 .and()
                 .apply(securityConfigurerAdapter());
-
     }
 
     private JWTConfigurer securityConfigurerAdapter() {
         return new JWTConfigurer(tokenProvider);
     }
-
 }

@@ -1,3 +1,4 @@
 jwt:
   expires_in: 300 # 5 minutes
+  expires_in_by_remember_me: 86400 # 1 day
   secret: My ultra cool and long and secure password. Eat that security! How long and beautiful this password, so secure, so amazing.

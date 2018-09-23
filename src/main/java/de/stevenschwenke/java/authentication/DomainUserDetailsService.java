@@ -25,7 +25,7 @@ public class DomainUserDetailsService implements UserDetailsService {
      * map user -> encrypted password
      */
     private Map<String, String> credentials = new HashMap<>(){{
-        put("joe", "$2a$10$FETmvGZlLA8txiuL1Y6dqehHoUO/Q86Kxn5P72lLT6QAE37TnbCeq");
+        put("joe", "$2a$10$FETmvGZlLA8txiuL1Y6dqehHoUO/Q86Kxn5P72lLT6QAE37TnbCeq"); // pw: "joe"
     }};
 
     @Override

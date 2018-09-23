@@ -30,14 +30,7 @@ public class TokenProvider {
     private Key key;
 
     private long tokenValidityInMilliseconds;
-
-//    private long tokenValidityInMillisecondsForRememberMe;
-//
-//    private final JHipsterProperties jHipsterProperties;
-//
-//    public TokenProvider(JHipsterProperties jHipsterProperties) {
-//        this.jHipsterProperties = jHipsterProperties;
-//    }
+    private long tokenValidityInMillisecondsForRememberMe;
 
     @PostConstruct
     public void init() {
@@ -47,9 +40,8 @@ public class TokenProvider {
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.tokenValidityInMilliseconds =
             1000 * (Integer.valueOf(environment.getProperty("jwt.expires_in")));
-//        this.tokenValidityInMillisecondsForRememberMe =
-//            1000 * jHipsterProperties.getSecurity().getAuthentication().getJwt()
-//                .getTokenValidityInSecondsForRememberMe();
+        this.tokenValidityInMillisecondsForRememberMe =
+            1000 * (Integer.valueOf(environment.getProperty("jwt.expires_in_by_remember_me")));
     }
 
     public String createToken(Authentication authentication, boolean rememberMe) {
@@ -58,14 +50,13 @@ public class TokenProvider {
             .map(GrantedAuthority::getAuthority)
             .collect(Collectors.joining(","));
 
-        // TODO here somewhere: add further information to be send in the JWT
         long now = (new Date()).getTime();
         Date validity;
-//        if (rememberMe) {
-//            validity = new Date(now + this.tokenValidityInMillisecondsForRememberMe);
-//        } else {
+        if (rememberMe) {
+            validity = new Date(now + this.tokenValidityInMillisecondsForRememberMe);
+        } else {
             validity = new Date(now + this.tokenValidityInMilliseconds);
-//        }
+        }
 
         return Jwts.builder()
             .setSubject(authentication.getName())

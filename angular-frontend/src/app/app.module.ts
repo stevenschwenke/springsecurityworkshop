@@ -10,7 +10,6 @@ import {LoginService} from './core/login/login.service';
 import {LoginMaskComponent} from './login-mask/login-mask.component';
 import {AppRoutingModule} from './app-routing.module';
 import {AuthServerProvider} from './core/auth/auth-jwt.service';
-import {StateStorageService} from './core/auth/state-storage.service';
 import {FormsModule} from '@angular/forms';
 import { Ng2Webstorage } from 'ngx-webstorage';
 import {AuthExpiredInterceptor} from './core/auth/interceptor/auth-expired.interceptor';
@@ -33,7 +32,6 @@ import {AuthInterceptor} from './core/auth/interceptor/auth.interceptor';
     AuthServerProvider,
     CoffeeSpecialtiesService,
     LoginService,
-    StateStorageService,
     {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,
