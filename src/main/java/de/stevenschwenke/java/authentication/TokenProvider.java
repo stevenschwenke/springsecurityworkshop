@@ -9,11 +9,15 @@ import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.stream.Collectors;
 
@@ -39,16 +43,16 @@ public class TokenProvider {
         keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.tokenValidityInMilliseconds =
-            1000 * (Integer.valueOf(environment.getProperty("jwt.expires_in")));
+                1000 * (Integer.valueOf(environment.getProperty("jwt.expires_in")));
         this.tokenValidityInMillisecondsForRememberMe =
-            1000 * (Integer.valueOf(environment.getProperty("jwt.expires_in_by_remember_me")));
+                1000 * (Integer.valueOf(environment.getProperty("jwt.expires_in_by_remember_me")));
     }
 
     public String createToken(Authentication authentication, boolean rememberMe) {
 
         String authorities = authentication.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .collect(Collectors.joining(","));
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(","));
 
         long now = (new Date()).getTime();
         Date validity;
@@ -59,28 +63,28 @@ public class TokenProvider {
         }
 
         return Jwts.builder()
-            .setSubject(authentication.getName())
-            .claim(AUTHORITIES_KEY, authorities)
-            .signWith(key, SignatureAlgorithm.HS512)
-            .setExpiration(validity)
-            .compact();
+                .setSubject(authentication.getName())
+                .claim(AUTHORITIES_KEY, authorities)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .setExpiration(validity)
+                .compact();
     }
 
     public Authentication getAuthentication(String token) {
-//        Claims claims = Jwts.parser()
-//            .setSigningKey(key)
-//            .parseClaimsJws(token)
-//            .getBody();
-//
-//        Collection<? extends GrantedAuthority> authorities =
-//            Arrays.stream(claims.get(AUTHORITIES_KEY).toString().split(","))
-//                .map(SimpleGrantedAuthority::new)
-//                .collect(Collectors.toList());
-//
-//        User principal = new User(claims.getSubject(), "", authorities);
-//
-//        return new UsernamePasswordAuthenticationToken(principal, token, authorities);
-        return new UsernamePasswordAuthenticationToken("joe", "joe");
+
+        Claims claims = Jwts.parser()
+                .setSigningKey(key)
+                .parseClaimsJws(token)
+                .getBody();
+
+        Collection<? extends GrantedAuthority> authorities =
+                Arrays.stream(claims.get(AUTHORITIES_KEY).toString().split(","))
+                        .map(SimpleGrantedAuthority::new)
+                        .collect(Collectors.toList());
+
+        User principal = new User(claims.getSubject(), "", authorities);
+
+        return new UsernamePasswordAuthenticationToken(principal, token, authorities);
     }
 
     public boolean validateToken(String authToken) {

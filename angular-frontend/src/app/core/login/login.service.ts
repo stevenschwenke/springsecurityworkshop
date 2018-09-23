@@ -12,9 +12,7 @@ export class LoginService {
         return new Promise((resolve, reject) => {
             this.authServerProvider.login(credentials).subscribe(
                 data => {
-                    // this.principal.identity(true).then(account => {
                         resolve(data);
-                    // });
                     return cb();
                 },
                 err => {
