@@ -337,24 +337,6 @@ boolean supports(Class<?> authentication);
 ** FilterSecurityInterceptor: filters HTTP requests by checking requests against the _@RequestMapping_ annotations
 ** MethodSecurityInterceptor: filters method invocations by checking requests against _@Secured_ annotations above methods
 
-=== CSRF
-* Cross Site Request Forgery
-* fundamental problem: browser using open session from "good" site to run requests from "bad" site to the good site
-* example:
-** browsing to banking website
-** logging in and thus creating a session
-** forget to log out or open another tab
-** -> the session is still alive!
-** open bad site
-** bad site uses open session to send request to banking website, but with changed details
-** banking site has no way of knowing that forged request is not intended by user
-* solution: check where requests are coming from
-* automatically secured when using Spring Security
-* on frontend: need to send CSRF-token with every request
-* that token send by server when loading page for the very first time, stored in browser and send back with every request
-* token could change with every user or every couple of minutes, so malicious website cannot know / guess it
-* JHipster: "Spring Security and Angular both have CSRF protection out-of-the-box, but unfortunately they don’t use the same cookies or HTTP headers! In practice, you have in fact no protection at all for CSRF attacks. Of course, we re-configure both tools so that they correctly work together." (https://www.jhipster.tech/security/[source])
-
 === Encoding passwords
 * never store user credentials in plain text!
 * setup in JHipster already using best password encoder BCrypt:
@@ -560,6 +542,126 @@ public String blubber(String username) {
 * because many permissions are loaded, additional cache like EhCache can be used
 * actual filtering done via _@PostAuthorize_
 * other source: https://www.baeldung.com/spring-security-acl
+
+== Defending agains CSRF with CORS
+=== Definition of CSRF and simple solution with Same-origin policy
+* CSRF = Cross Site Request Forgery
+* fundamental problem: browser using open session from "good" site to run requests from "bad" site to the good site
+* example:
+** browsing to banking website
+** logging in and thus creating a session
+** forget to log out or open another tab
+** -> the session is still alive!
+** open bad site
+** bad site uses open session to send request to banking website, but with changed details
+** banking site has no way of knowing that forged request is not intended by user
+* solution: https://en.wikipedia.org/wiki/Same-origin_policy[Same-origin policy] = browser only allows a script from one web page to access data in a second web page if both are from the same origin
+
+=== Why Same-origin policy doesn't work with Angular
+* Angular: one server for UI (= Angular app), one server for backend API (= Spring application)
+* with same-origin policy, Angular app not allowed to access backend API because different URIs (different ports if running on one machine)
+* needed: ralxing same-origin policy to allow backend calls
+* https://en.wikipedia.org/wiki/Same-origin_policy#Relaxing_the_same-origin_policy[Options to relax same-origin policy]
+
+=== Solution for Angular: Relaxing Same-origin policy with CORS
+==== Explanation
+* https://en.wikipedia.org/wiki/Cross-origin_resource_sharing[CORS] = Cross-Origin resource sharing
+* add new request header:
+
+[source, xml]
+----
+Origin: http://www.example.com
+----
+
+* server responds with ACAO header:
+
+[sourece, xml]
+----
+Access-Control-Allow-Origin: http://www.example.com
+----
+
+if only access from origin _http://www.example.com_ is allowed or
+
+[sourece, xml]
+----
+Access-Control-Allow-Origin: *
+----
+
+if access from all domains is allowed (effectively disabling security against CSRF, only for completely public content)
+
+* Browser responsible for CORS protection:
+1. enable CORS
+1. remove all configuration that would allow access, hence disallowing access from every URI other than that of the server itself
+1. set breakpoint in Controller on server
+1. refresh page: breakpoint is reached, hence data is send to browser, but browser doesn't forward data to caller
+
+==== Changes in code
+* _SecurityConfiguration.java_ has to be changed to:
+
+[source, java]
+----
+    @Override
+    public void configure(HttpSecurity http) throws Exception {
+        http
+                .csrf()
+                .disable()
+                .exceptionHandling()
+                .and()
+                .cors()
+                .and()
+                .authorizeRequests()
+                .antMatchers("/api/authenticate").permitAll()
+                .antMatchers("/api/**").authenticated()
+                .and()
+                .apply(securityConfigurerAdapter());
+    }
+----
+
+* _WebConfig.java_:
+
+[source, java]
+----
+@Configuration
+@EnableWebMvc
+public class WebConfig implements WebMvcConfigurer {
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        final CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(java.util.List.of("http://localhost:4200"));
+        configuration.setAllowedMethods(java.util.List.of("HEAD", "GET", "POST", "PUT", "DELETE", "PATCH"));
+        // setAllowCredentials(true) is important, otherwise:
+        // The value of the 'Access-Control-Allow-Origin' header in the response must not be the wildcard '*' when the request's credentials mode is 'include'.
+        configuration.setAllowCredentials(true);
+        // setAllowedHeaders is important! Without it, OPTIONS preflight request
+        // will fail with 403 Invalid CORS request
+        configuration.setAllowedHeaders(java.util.List.of("Authorization", "Cache-Control", "Content-Type"));
+        final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
+----
+
+=== Preflight requests
+* specification of CORS mandates that browser sends preflight-request before sending data-changing requests like POST or PUT):
+
+[source, xml]
+----
+OPTIONS /
+Host: service.example.com
+Origin: http://www.example.com
+----
+
+* server responds with
+
+[source, xml]
+----
+Access-Control-Allow-Origin: http://www.example.com
+Access-Control-Allow-Methods: PUT, DELETE
+----
+* after approval from server, send real request
 
 == TLS
 * encrypts data send between client and server

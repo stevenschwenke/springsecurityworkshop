@@ -3,7 +3,6 @@ package de.stevenschwenke.java.authentication;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -63,17 +62,20 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(WebSecurity web) throws Exception {
         web.ignoring()
-                .antMatchers("/api/authenticate")
-                .antMatchers(HttpMethod.OPTIONS, "/**") // Bad style, but for demo OK
                 .antMatchers("/h2-console/**");
     }
 
     @Override
     public void configure(HttpSecurity http) throws Exception {
         http
-                .cors().disable() // for demo OK
-                .csrf().disable() // for demo OK
+                .csrf()
+                .disable()
+                .exceptionHandling()
+                .and()
+                .cors()
+                .and()
                 .authorizeRequests()
+                .antMatchers("/api/authenticate").permitAll()
                 .antMatchers("/api/**").authenticated()
                 .and()
                 .apply(securityConfigurerAdapter());
