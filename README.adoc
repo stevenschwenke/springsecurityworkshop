@@ -665,6 +665,14 @@ Access-Control-Allow-Methods: PUT, DELETE
 
 == TLS
 * encrypts data send between client and server
+* TLS = transport layer security = successor of deprecated SSL
+* HTTPS = hypertext transfer protocol secure = HTTP over TLS
+* goals of TLS:
+1. privacy (via encryption)
+1. data integrity
+1. authenticity
+* https://security.stackexchange.com/questions/20803/how-does-ssl-tls-work[nice explanation of TLS handshake] (and more)
+
 * create public key for application via terminal - in JHipster, nice stage separation done:
 * _application-dev.yml_:
 
